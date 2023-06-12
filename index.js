@@ -25,6 +25,25 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
+
+    const popularClassCollection= client.db("musicDb").collection("popularClass");
+    const popularInstructorCollection= client.db("musicDb").collection("popularInstructor");
+  
+
+    app.get('/popularClass',async(req,res) =>{
+      const result = await popularClassCollection.find().toArray();
+      res.send(result);
+    })
+    app.get('/popularInstructor',async(req,res) =>{
+      const result = await popularInstructorCollection.find().toArray();
+      res.send(result);
+    })
+
+
+
+
+
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
@@ -32,7 +51,7 @@ async function run() {
     );
   } finally {
     // Ensures that the client will close when you finish/error
-    await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
