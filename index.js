@@ -1,11 +1,20 @@
+
+require("dotenv").config();
 const express = require("express");
 const app = express("cors");
 const cors = require("cors");
-require("dotenv").config();
+
+const jwt = require('jsonwebtoken');
+
 const port = process.env.PORT || 5000;
 
 // middleware
-app.use(cors());
+const corsConfig = {
+  origin: '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE']
+  }
+  app.use(cors(corsConfig))
 app.use(express.json());
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
@@ -24,13 +33,19 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const usersCollection= client.db("musicDb").collection("users");
     const popularClassCollection= client.db("musicDb").collection("popularClass");
     const popularInstructorCollection= client.db("musicDb").collection("popularInstructor");
     const cartCollection= client.db("musicDb").collection("carts");
   
+
+    app.post('/jwt',async(req,res) =>{
+        const user = req.body;
+        const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' } ) 
+        res.send({ token })
+    })
 
       // user api
 
