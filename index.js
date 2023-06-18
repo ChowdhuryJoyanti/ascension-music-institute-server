@@ -1,18 +1,19 @@
 
 require("dotenv").config();
 const express = require("express");
-const app = express("cors");
+// const app = express("cors");
 const cors = require("cors");
 
 const jwt = require('jsonwebtoken');
 
 const port = process.env.PORT || 5000;
 
+const app = express();
 // middleware
 const corsConfig = {
   origin: '*',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE']
+  methods: ['GET', 'POST', 'PUT', 'DELETE','PATCH']
   }
   app.use(cors(corsConfig))
 app.use(express.json());
@@ -61,12 +62,28 @@ async function run() {
     app.post('/jwt',async(req,res) =>{
         const user = req.body;
         const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' } ) 
+       
         res.send({ token })
     })
 
+    const verifyAdmin = async(req,res,next) => {
+            const email =  req.decoded.email;
+            const query = {email:email}
+            const user = await usersCollection.findOne(query);
+            if(user.role !== 'admin'){  
+                return res.status(403).send({error :true , message:'forbidden message'});
+
+
+            }
+            next();
+
+    }
+
+
+
       // user api
 
-    app.get('/users', async(req,res) =>{
+    app.get('/users', verifyJWT,verifyAdmin, async(req,res) =>{
       const result = await usersCollection.find().toArray();
       res.send(result);
     })
@@ -90,12 +107,17 @@ async function run() {
 
 
 
-
-
     app.get('/popularClass',async(req,res) =>{
       const result = await popularClassCollection.find().toArray();
       res.send(result);
     })
+      app.post('/popularClass' ,verifyJWT,verifyAdmin, async(req, res) => {
+ 
+        const newClass = req.body;
+        const result = await popularClassCollection.insertOne(newClass);
+        res.send(result);
+      })
+
 
     app.get('/popularInstructor',async(req,res) =>{
       const result = await popularInstructorCollection.find().toArray();
@@ -130,6 +152,29 @@ async function run() {
 
 
     // security layout
+
+
+
+    app.patch('/users/instructor/:id', async(req,res) =>{
+      const id = req.params.id;
+      console.log(id);
+      const filter = {_id: new ObjectId(id)};
+      const updateDoc = {
+        $set: {
+         role: 'instructor'
+        },
+      };
+ 
+        const result = await usersCollection.updateOne(filter,updateDoc);
+
+        res.send(result);
+    })
+
+
+
+
+
+
       app.get('/users/admin/:email', verifyJWT ,async(req,res) =>{
 
         const email = req.params.email;
@@ -161,6 +206,47 @@ async function run() {
         res.send(result);
     })
 
+    
+
+    app.patch('/popularClass/:id', async (req, res) => {
+  const id = req.params.id
+  const update_Approval_Pending_Class = req.body;
+  const filter = { _id: new ObjectId(id) };                                             // Approve..
+  // const options = { upsert: true };
+  const update_Approval_Pending_Class_Doc = {
+    $set: {
+      status: update_Approval_Pending_Class.status,
+    },
+  };
+
+  const result = await popularClassCollection.updateOne(filter, update_Approval_Pending_Class_Doc);
+  res.send(result)
+
+})
+
+    app.patch('/popularClass/:id', async (req, res) => {
+  const id = req.params.id
+  const update_Approval_Deny_Class = req.body;
+  const filter = { _id: new ObjectId(id) };                                             // Approve..
+  // const options = { upsert: true };
+  const update_Approval_Deny_Class_Doc = {
+    $set: {
+      status: update_Approval_Deny_Class.status,
+    },
+  };
+
+  const result = await popularClassCollection.updateOne(filter, update_Approval_Deny_Class_Doc);
+  res.send(result)
+
+})
+
+
+
+
+
+
+
+
     app.delete('/carts/:id',async(req ,res) =>{
       const id = req.params.id;
       const query = {_id: new ObjectId(id)};
@@ -171,7 +257,7 @@ async function run() {
 
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
